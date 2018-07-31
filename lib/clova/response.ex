@@ -61,7 +61,7 @@ defmodule Clova.Response do
   Adds the specified `speech` to the response's `reprompt` data. This is used by Clova to
   reprompt the user for an utterance when clova is expecting a reply but none is detected.
 
-  `speech` can be Japanese text or a URL. When passing a URL, set the `url?` argument to `true`.
+  `speech` can be Japanese text or a URL. When passing a URL, set the `type` argument to `:url`.
   """
   def add_reprompt(resp, speech, type \\ :text) do
     reprompt =
