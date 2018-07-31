@@ -61,13 +61,13 @@ defmodule Clova.ResponseTest do
     assert bar_speech.value == "bar"
   end
 
-  test "add_speech with url? flag is reflected in the SpeechInfoObjecjt's type" do
+  test "add_speech with :url is reflected in the SpeechInfoObjecjt's type" do
     empty_msg = %Clova.Response{}
-    url_msg = Clova.Response.add_speech(empty_msg, "url", true)
+    url_msg = Clova.Response.add_speech(empty_msg, "url", :url)
     assert url_msg.response.outputSpeech.values.value == "url"
     assert url_msg.response.outputSpeech.values.type == "URL"
 
-    not_url_msg = Clova.Response.add_speech(empty_msg, "not url", false)
+    not_url_msg = Clova.Response.add_speech(empty_msg, "not url", :text)
     assert not_url_msg.response.outputSpeech.values.value == "not url"
     assert not_url_msg.response.outputSpeech.values.type == "PlainText"
 
@@ -94,11 +94,11 @@ defmodule Clova.ResponseTest do
     assert bar_speech.value == "bar"
   end
 
-  test "add_reprompt url? flag is reflected in the SpeechInfoObject type" do
+  test "add_reprompt with :url is reflected in the SpeechInfoObject type" do
     resp =
       %Clova.Response{}
-      |> Clova.Response.add_reprompt("foo", true)
-      |> Clova.Response.add_reprompt("bar", false)
+      |> Clova.Response.add_reprompt("foo", :url)
+      |> Clova.Response.add_reprompt("bar", :text)
       |> Clova.Response.add_reprompt("baz")
 
     [foo_speech, bar_speech, baz_speech] = resp.response.reprompt.outputSpeech.values

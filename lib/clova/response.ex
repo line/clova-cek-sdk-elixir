@@ -46,14 +46,14 @@ defmodule Clova.Response do
 
   @doc """
   Appends the specified `speech` to the response. `speech` can be Japanese text or a URL. When
-  passing a URL, set the `url?` argument to `true`.
+  passing a URL, set the `type` argument to `:url`.
 
   This function automatically upgrades a `SimpleSpeech`
   response to a `SpeechList` response if the response already contained a non-nil `SimpleSpeech`
   string. If the response was empty, and only one utterance is provided, a `SimpleSpeech` response is created.
   """
-  def add_speech(resp, speech, url? \\ false) do
-    output_speech = add_speech_to_output_speech(resp.response.outputSpeech, speech, url?)
+  def add_speech(resp, speech, type \\ :text) do
+    output_speech = add_speech_to_output_speech(resp.response.outputSpeech, speech, type)
     put_in(resp.response.outputSpeech, output_speech)
   end
 
@@ -63,14 +63,14 @@ defmodule Clova.Response do
 
   `speech` can be Japanese text or a URL. When passing a URL, set the `url?` argument to `true`.
   """
-  def add_reprompt(resp, speech, url? \\ false) do
+  def add_reprompt(resp, speech, type \\ :text) do
     reprompt =
       case resp.response.reprompt do
         existing = %Clova.Response.Reprompt{} -> existing
         nil -> %Clova.Response.Reprompt{}
       end
 
-    output_speech = add_speech_to_output_speech(reprompt.outputSpeech, speech, url?)
+    output_speech = add_speech_to_output_speech(reprompt.outputSpeech, speech, type)
     reprompt = put_in(reprompt.outputSpeech, output_speech)
     put_in(resp.response.reprompt, reprompt)
   end
@@ -93,14 +93,13 @@ defmodule Clova.Response do
     put_in(response.response.shouldEndSession, true)
   end
 
-  defp add_speech_to_output_speech(output_speech, speech, url?) do
-    speech_info =
-      if url? do
-        %Clova.Response.SpeechInfoObject{type: "URL", value: speech, lang: ""}
-      else
-        %Clova.Response.SpeechInfoObject{value: speech}
-      end
+  defp add_speech_to_output_speech(output_speech, speech, :text) do
+    speech_info = %Clova.Response.SpeechInfoObject{value: speech}
+    add_speech_to_output_speech(output_speech, speech_info)
+  end
 
+  defp add_speech_to_output_speech(output_speech, speech, :url) do
+    speech_info = %Clova.Response.SpeechInfoObject{type: "URL", value: speech, lang: ""}
     add_speech_to_output_speech(output_speech, speech_info)
   end
 
