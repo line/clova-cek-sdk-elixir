@@ -2,6 +2,8 @@
 
 A behaviour, plugs, and a parser for implementing a Clova Extension.
 
+## Summary
+
 Defines a `Clova` behaviour which can be implemented to receive callbacks to handle requests.
 `Plug` should be used to parse the request, validate it, and dispatch it to the `Clova` implementation.
 
@@ -32,5 +34,22 @@ defmodule MyExtension do
 end
 ```
 For a more detailed example, see the [AirQuality example extension](https://github.com/line/clova-cek-sdk-elixir-sample).
+
+## Installation
+
+Add `:clova` to your `mix.exs` dependencies. This package assumes you will be using Plug - see the
+[Plug documentation](https://hexdocs.pm/plug/) for setting up a Plug application.
+
+```
+  defp deps do
+    [
+      {:clova, "~> 0.1"},
+      {:plug, "~> 1.5"},
+      {:cowboy, "~> 2.2"}
+    ]
+  end
+```
+
+## Online Documentation
 
 [Full documentation is available on HexDocs.](https://hexdocs.pm/clova/)

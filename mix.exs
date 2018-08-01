@@ -72,9 +72,9 @@ defmodule Clova.MixProject do
 
   def deps do
     [
-      {:plug, "~> 1.5.0"},
+      {:plug, "~> 1.5"},
       {:ex_crypto, "~> 0.9.0"},
-      {:poison, "~> 3.1.0"},
+      {:poison, "~> 3.1"},
       {:ex_doc, "~> 0.16", only: :dev, runtime: false}
     ]
   end
