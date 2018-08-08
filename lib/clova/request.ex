@@ -78,4 +78,11 @@ defmodule Clova.Request do
       end
     end
   end
+
+  @doc """
+  Helper function to retrieve the session attributes.
+  """
+  def get_session_attributes(request) do
+    request.session.sessionAttributes()
+  end
 end
