@@ -3,39 +3,36 @@ defmodule Clova.RequestTest do
   alias Clova.Request
 
   test "get_slot returns nil if there is no slot data" do
-    request = make_request(slots: nil)
+    request = make_request(nil)
     slots = Request.get_slot(request, "foo")
     assert slots == nil
   end
 
   test "get_slot returns nil slot is present but its value is nil" do
-    request = make_request(slots: %{"foo" => %{"name" => "foo", "value" => nil}})
+    request = make_request(%{"foo" => %{"name" => "foo", "value" => nil}})
     slots = Request.get_slot(request, "foo")
     assert slots == nil
   end
 
   test "get_slot returns the value of the slot data" do
-    request = make_request(slots: %{"foo" => %{"name" => "foo", "value" => "bar"}})
+    request = make_request(%{"foo" => %{"name" => "foo", "value" => "bar"}})
     slots = Request.get_slot(request, "foo")
     assert slots == "bar"
   end
 
-  test "get_session_attributes gets the session attributes" do
-    empty_req = %Request{}
-    assert empty_req.session.sessionAttributes === %{}
-    assert Request.get_session_attributes(empty_req) === %{}
-
-    attrib_req = make_request(session_attrs: %{foo: "bar"})
-    assert attrib_req.session.sessionAttributes === %{foo: "bar"}
-    assert Request.get_session_attributes(attrib_req) === %{foo: "bar"}
-
+  test "session_attributes gets the session attributes" do
+    assert make_request() |> Request.session_attributes() === %{"foo" => "bar"}
   end
 
-  defp make_request(slots: slots) do
-    %Request{request: %Request.Request{intent: %Request.Intent{slots: slots}}}
+  test "application id gets the application do" do
+    assert make_request() |> Request.application_id() === "test_app_id"
   end
 
-  defp make_request(session_attrs: session_attrs) do
-    %Request{session: %Request.Session{sessionAttributes: session_attrs}}
+  defp make_request(slots \\ nil) do
+    %{
+      "request" => %{"intent" => %{"slots" => slots}},
+      "session" => %{"sessionAttributes" => %{"foo" => "bar"}},
+      "context" => %{"System" => %{"application" => %{"applicationId" => "test_app_id"}}}
+    }
   end
 end

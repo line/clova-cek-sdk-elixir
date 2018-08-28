@@ -66,10 +66,7 @@ defmodule Clova.DispatcherTest do
   end
 
   defp make_req(type, intent \\ nil) do
-    req = %Clova.Request{}
-    req = put_in(req.request.type, type)
-    req = put_in(req.request.intent.name, intent)
-    conn = conn(:post, "/clova", "")
-    put_in(conn.body_params, req)
+    req = %{"request" => %{"type" => type, "intent" => %{"name" => intent}}}
+    %{conn(:post, "/clova", "") | body_params: req}
   end
 end

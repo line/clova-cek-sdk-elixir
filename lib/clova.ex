@@ -8,9 +8,10 @@ defmodule Clova do
   plug Clova.Dispatcher, dispatch_to: MyExtension
   ```
 
-  Each callback is called with a `Clova.Request` and `Clova.Response` struct. Helpers exist on those
-  modules to extract data from the request and add data to the response. The callbacks should return
-  the completed response struct, which will be added to the `Plug.Conn` struct by `Clova.Dispatcher`.
+  Each callback is called with a map representing the decoded clova request, and a struct representing the
+  clova response. Helpers from the `Clova.Request` and `Clova.Response` modules for reading the request
+  and manipulating the response are imported by default.  The callbacks should return the completed response
+  struct, which will be added to the `Plug.Conn` struct by `Clova.Dispatcher`.
   """
 
   alias Clova.{Request, Response}
@@ -22,7 +23,7 @@ defmodule Clova do
   in `Clova.Response` in order to produce a completed response to return.
   """
   @callback handle_launch(
-              request :: Request.t(),
+              request :: Map.t(),
               response :: Response.t()
             ) :: Response.t()
 
@@ -38,7 +39,7 @@ defmodule Clova do
   """
   @callback handle_intent(
               name :: String.t(),
-              request :: Request.t(),
+              request :: Map.t(),
               response :: Response.t()
             ) :: Response.t()
 
@@ -50,7 +51,7 @@ defmodule Clova do
   any response to a `SessionEndedRequest` is ignored by the server.
   """
   @callback handle_session_ended(
-              request :: Request.t(),
+              request :: Map.t(),
               response :: Response.t()
             ) :: Response.t()
 

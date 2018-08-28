@@ -7,15 +7,17 @@ defmodule Clova.Dispatcher do
 
   Pass your callback module as the `dispatch_to` argument to the plug.
 
-  This plug expects the `Plug.Conn` struct to have been parsed by `Clova.Parser` and validated by
-  `Clova.Validator`.
+  This plug expects the request to have been parsed by `Plug.Parsers`, and validated by `Clova.Validator`.
 
   This plug encodes the callback response into JSON and places it into the connection's response body.
   This plug also sets the connection status, meaning your endpoint can simply call `Plug.Conn.send_resp/1`
   with the `conn` argument.
 
   ```
-  plug Plug.Parsers, parsers: [Clova.Parser]
+  plug Plug.Parsers,
+    parsers: [:json],
+    json_decoder: Poison,
+    body_reader: Clova.CachingBodyReader.spec()
   plug Clova.Validator, app_id: "com.example.my_extension"
   plug Clova.Dispatcher, dispatch_to: MyExtension
   plug :match
@@ -32,7 +34,10 @@ defmodule Clova.Dispatcher do
   `Plug.Conn`'s response body yourself.
 
   ```
-  plug Plug.Parsers, parsers: [Clova.Parser]
+  plug Plug.Parsers,
+    parsers: [:json],
+    json_decoder: Poison,
+    body_reader: Clova.CachingBodyReader.spec()
   plug Clova.Validator, app_id: "com.example.my_extension"
   plug Clova.Dispatcher, dispatch_to: MyExtension, skip_json_encoding: true
   plug :match
@@ -62,16 +67,17 @@ defmodule Clova.Dispatcher do
     end
   end
 
-  def call(conn, %{dispatch_to: handler, skip_json_encoding: skip_json_encoding}) do
-    request = conn.body_params
-
+  def call(
+        %Plug.Conn{body_params: request} = conn,
+        %{dispatch_to: handler, skip_json_encoding: skip_json_encoding}
+      ) do
     response =
-      case request.request.type do
+      case request["request"]["type"] do
         "LaunchRequest" ->
           handler.handle_launch(request, %Clova.Response{})
 
         "IntentRequest" ->
-          handler.handle_intent(request.request.intent.name, request, %Clova.Response{})
+          handler.handle_intent(request["request"]["intent"]["name"], request, %Clova.Response{})
 
         "SessionEndedRequest" ->
           handler.handle_session_ended(request, %Clova.Response{})

@@ -30,32 +30,50 @@ defmodule Clova.ValidatorTest do
     assert expected_fingerprint === actual_fingerprint
   end
 
-  test "when the signature could not be parsed, returns unauthorized response", %{
-    public_key: public_key
-  } do
-    conn =
-      conn(:post, "/clova", "")
-      |> assign(:signature, {:error, "oops"})
-      |> assign(:raw_body, ~S(["dummy json"]))
+  test "Fails when the signature is missing" do
+    conn = make_conn()
+    opts = %{public_key: "dummy", app_id: "dummy", force_signature_valid: false}
 
-    conn =
-      Clova.Validator.call(conn, %{
-        public_key: public_key,
-        app_id: nil,
-        force_signature_valid: false
-      })
-
+    conn = Clova.Validator.call(conn, opts)
+    assert conn.resp_body === "Message unsigned"
     assert conn.status === 403
     refute conn.assigns.clova_valid
   end
 
-  test "when the signature does not validate, returns unauthorized response",
-       %{public_key: public_key, private_key: private_key} do
-    sig = ExPublicKey.sign("signed data", private_key)
+  test "Fails if the signature is not base-64 encoded" do
+    conn =
+      make_conn()
+      |> put_req_header("signaturecek", "forgot to base64 encode")
 
+    opts = %{public_key: "dummy", app_id: "dummy", force_signature_valid: false}
+
+    conn = Clova.Validator.call(conn, opts)
+    assert conn.resp_body === "Signature not Base64 encoded"
+    assert conn.status === 403
+    refute conn.assigns.clova_valid
+  end
+
+  test "Fails with a dump of the header if could not parse for unknown reason" do
+    conn =
+      make_conn()
+      # Put in two signaturecek headers to confuse things
+      |> put_req_header("signaturecek", "one")
+      |> Map.update!(:req_headers, &(&1 ++ [{"signaturecek", "two"}]))
+
+    opts = %{public_key: "dummy", app_id: "dummy", force_signature_valid: false}
+
+    conn = Clova.Validator.call(conn, opts)
+    assert conn.resp_body === ~S(Signature header in unexpected format: ["one", "two"])
+    assert conn.status === 403
+    refute conn.assigns.clova_valid
+  end
+
+  test "when the signature does not validate, returns unauthorized response", %{
+    public_key: public_key
+  } do
     conn =
       conn(:post, "/clova", "")
-      |> assign(:signature, {:ok, sig})
+      |> put_req_header("signaturecek", "aGVsbG8=")
       |> assign(:raw_body, "different_data")
 
     conn =
@@ -67,15 +85,17 @@ defmodule Clova.ValidatorTest do
 
     assert conn.status === 403
     refute conn.assigns.clova_valid
+    assert conn.resp_body === "Signature invalid"
   end
 
   test "when the signature does validate, sets :clova_valid to true",
        %{public_key: public_key, private_key: private_key} do
-    sig = ExPublicKey.sign("signed data", private_key)
+    {:ok, sig} = ExPublicKey.sign("signed data", private_key)
+    sig = Base.encode64(sig)
 
     conn =
       conn(:post, "/clova", "")
-      |> assign(:signature, sig)
+      |> put_req_header("signaturecek", sig)
       |> assign(:raw_body, "signed data")
 
     conn =
@@ -90,13 +110,14 @@ defmodule Clova.ValidatorTest do
 
   test "when force_signature_valid is used, signature is validated even if it's invalid",
        %{public_key: public_key, private_key: private_key} do
-    sig = ExPublicKey.sign("signed data", private_key)
+    {:ok, sig} = ExPublicKey.sign("signed data", private_key)
+    sig = Base.encode64(sig)
 
     conn =
       conn(:post, "/clova", "")
-      |> assign(:signature, sig)
+      |> put_req_header("signaturecek", sig)
       |> assign(:raw_body, "invalid data")
-      |> Map.put(:body_params, make_req_with_app_id("test.matching.id"))
+      |> Map.put(:body_params, make_body_params("test.matching.id"))
 
     conn =
       Clova.Validator.call(conn, %{
@@ -120,9 +141,9 @@ defmodule Clova.ValidatorTest do
   test "when app_id is set, and it's different to actual app_id, validation fails" do
     conn =
       conn(:post, "/clova", "")
-      |> assign(:signature, {:ok, "dummy sig"})
+      |> put_req_header("signaturecek", "aGVsbG8=")
       |> assign(:raw_body, "dummy")
-      |> Map.put(:body_params, make_req_with_app_id("test.actual.id"))
+      |> Map.put(:body_params, make_body_params("test.actual.id"))
 
     conn =
       Clova.Validator.call(conn, %{
@@ -138,13 +159,14 @@ defmodule Clova.ValidatorTest do
 
   test "when app_id is set and the request matches, validation passes",
        %{public_key: public_key, private_key: private_key} do
-    sig = ExPublicKey.sign("signed data", private_key)
+    {:ok, sig} = ExPublicKey.sign("signed data", private_key)
+    sig = Base.encode64(sig)
 
     conn =
       conn(:post, "/clova", "")
-      |> assign(:signature, sig)
+      |> put_req_header("signaturecek", sig)
       |> assign(:raw_body, "signed data")
-      |> Map.put(:body_params, make_req_with_app_id("test.matching.id"))
+      |> Map.put(:body_params, make_body_params("test.matching.id"))
 
     conn =
       Clova.Validator.call(conn, %{
@@ -169,15 +191,16 @@ defmodule Clova.ValidatorTest do
     |> ExPublicKey.RSAPrivateKey.from_sequence()
   end
 
-  defp make_req_with_app_id(app_id) do
-    %Clova.Request{
-      context: %Clova.Request.Context{
-        System: %Clova.Request.System{
-          application: %{
-            "applicationId" => app_id
-          }
-        }
-      }
-    }
+  defp make_body_params(app_id \\ "com.example.app") do
+    %{"context" => %{"System" => %{"application" => %{"applicationId" => app_id}}}}
+  end
+
+  defp make_conn do
+    dummy_body = "{}"
+
+    conn(:post, "/clova", dummy_body)
+    |> put_req_header("content-type", "application/json")
+    |> assign(:raw_body, dummy_body)
+    |> Map.put(:body_params, make_body_params())
   end
 end

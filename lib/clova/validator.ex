@@ -21,15 +21,24 @@ defmodule Clova.Validator do
   public key. If the signature is invalid, the connection state is set to 403 Forbidden
   and the plug pipeline is halted.
 
+  Due to the fact that the raw request body is required in order to validate the signature, this plug
+  expects the raw request body to be available in the `raw_body` assign of the `Plug.Conn` struct.
+  The `Clova.CachingBodyReader` module can be provided to the `Plug.Parsers` plug to prepare this data
+  while still parsing the request body.
+
   Usage:
   ```
+  plug Plug.Parsers,
+    parsers: [:json],
+    json_decoder: Poison,
+    body_reader: Clova.CachingBodyReader.spec()
   plug Clova.Validator, app_id: "com.example.my_extension"
   ```
 
   ## Options
 
   * `:app_id` - The application ID as specified in the Clova Developer Center. All requests must contain this ID in the request body. If this option is not provided, the app ID validity is not checked.
-  * `:force_signature_valid` - forces the plug to consider the signature to be valid. This is intended for use in development, because only requests signed by the CEK server will validate against the default public key.
+  * `:force_signature_valid` - forces the plug to consider the signature to be valid. This is intended for use in development, because only requests signed by the CEK server will validate against the default public key. Note the signature must still be present and base64-encoded.
   * `:public_key` - override the public key used by this plug. This can be used during testing and development to validate requests generated with the corresponding private key. Alternatievely if the CEK server changes its public key, this can be used to override the default key used by this module until an updated version of this module is available.
 
   """
@@ -43,30 +52,28 @@ defmodule Clova.Validator do
   end
 
   def call(
-        conn = %{assigns: %{signature: {:ok, signature}, raw_body: body}},
+        conn = %{assigns: %{raw_body: body}, body_params: request},
         %{public_key: public_key, app_id: expected_id, force_signature_valid: force}
       ) do
-    app_id =
-      if expected_id do
-        conn.body_params.context."System".application["applicationId"]
-      else
-        nil
+    with [signature_header] <- get_req_header(conn, "signaturecek"),
+         {:ok, signature} <- Base.decode64(signature_header) do
+      app_id = if expected_id, do: Clova.Request.application_id(request), else: nil
+
+      cond do
+        !signature_valid?(body, signature, public_key, force) ->
+          unauthorized(conn, "Signature invalid")
+
+        !app_id_valid?(expected_id, app_id) ->
+          unauthorized(conn, "Expected applicationId #{expected_id}, got #{app_id}")
+
+        true ->
+          assign(conn, :clova_valid, true)
       end
-
-    cond do
-      !signature_valid?(body, signature, public_key, force) ->
-        unauthorized(conn, "Signature invalid")
-
-      !app_id_valid?(expected_id, app_id) ->
-        unauthorized(conn, "Expected applicationId #{expected_id}, got #{app_id}")
-
-      true ->
-        assign(conn, :clova_valid, true)
+    else
+      [] -> unauthorized(conn, "Message unsigned")
+      :error -> unauthorized(conn, "Signature not Base64 encoded")
+      err -> unauthorized(conn, "Signature header in unexpected format: #{inspect err}")
     end
-  end
-
-  def call(conn = %{assigns: %{signature: {:error, reason}}}, _opts) do
-    unauthorized(conn, reason)
   end
 
   def call(conn, _opts) do
@@ -82,12 +89,10 @@ defmodule Clova.Validator do
 
   defp app_id_valid?(expected, actual), do: !expected || expected === actual
 
-  defp signature_valid?(body, signature, public_key, force) do
-    if force do
-      true
-    else
-      {:ok, valid} = ExPublicKey.verify(body, signature, public_key)
-      valid
-    end
+  defp signature_valid?(_body, _signature, _public_key, true), do: true
+
+  defp signature_valid?(body, signature, public_key, false) do
+    {:ok, valid} = ExPublicKey.verify(body, signature, public_key)
+    valid
   end
 end

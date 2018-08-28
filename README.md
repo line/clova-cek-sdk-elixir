@@ -1,6 +1,6 @@
 # Clova
 
-A behaviour, plugs, and a parser for implementing a Clova Extension.
+A behaviour and related modules for implementing a Clova Extension.
 
 ## Summary
 
@@ -10,7 +10,10 @@ Defines a `Clova` behaviour which can be implemented to receive callbacks to han
 Example `Plug.Router` pipeline:
 
 ```
-plug Plug.Parsers, parsers: [Clova.Parser]
+plug Plug.Parsers,
+   parsers: [:json],
+   json_decoder: Poison,
+   body_reader: Clova.CachingBodyReader.spec()
 plug Clova.Validator, app_id: "com.example.my_extension"
 plug Clova.Dispatcher, dispatch_to: MyExtension
 plug :match
@@ -43,7 +46,7 @@ Add `:clova` to your `mix.exs` dependencies. This package assumes you will be us
 ```
   defp deps do
     [
-      {:clova, "~> 0.1"},
+      {:clova, "~> 0.2.2"},
       {:plug, "~> 1.5"},
       {:cowboy, "~> 2.2"}
     ]
