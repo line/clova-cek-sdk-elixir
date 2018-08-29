@@ -11,6 +11,6 @@ be fantastic if you help us by doing any of the following:
 
 ## Contributor license agreement
 
-If you are sending a pull request and it's a non-trivial change beyond fixing
-typos, please make sure to sign the [ICLA (Individual Contributor License Agreement)](https://feedback.line.me/enquete/public/3330-xZLvnjDt).
-Please contact us if you need the CCLA (Corporate Contributor License Agreement).
+When you are sending a pull request and it's a non-trivial change beyond fixing typos, please sign
+[the ICLA (individual contributor license agreement)](https://cla-assistant.io/line/clova-cek-sdk-elixir).
+Please [contact us](mailto:dl_oss_dev@linecorp.com) if you need the CCLA (corporate contributor license agreement).
