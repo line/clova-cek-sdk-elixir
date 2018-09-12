@@ -11,12 +11,8 @@ defmodule Clova.ValidatorTest do
   @private_key_file "test/keys/private.pem"
 
   setup_all context do
-    public_key = ExPublicKey.load!(@public_key_file)
+    public_key = load_pub_key(@public_key_file)
     private_key = load_priv_key(@private_key_file)
-
-    public_fingerprint = ExPublicKey.RSAPublicKey.get_fingerprint(public_key)
-    private_fingerprint = ExPublicKey.RSAPrivateKey.get_fingerprint(private_key)
-    assert public_fingerprint === private_fingerprint
 
     context
     |> Map.put(:public_key, public_key)
@@ -24,10 +20,9 @@ defmodule Clova.ValidatorTest do
   end
 
   test "init uses the default public key" do
-    expected_fingerprint = "0aa9590f35a0646b12ceeb09103ba0cbdde4a97b8dca10d956550f3f8c1bee86"
     %{public_key: default_key, app_id: nil} = Validator.init([])
-    actual_fingerprint = ExPublicKey.RSAPublicKey.get_fingerprint(default_key)
-    assert expected_fingerprint === actual_fingerprint
+    {:RSAPublicKey, data, _} = default_key
+    assert to_string(data) |> String.starts_with?("2450758132787322")
   end
 
   test "Fails when the signature is missing" do
@@ -90,8 +85,8 @@ defmodule Clova.ValidatorTest do
 
   test "when the signature does validate, sets :clova_valid to true",
        %{public_key: public_key, private_key: private_key} do
-    {:ok, sig} = ExPublicKey.sign("signed data", private_key)
-    sig = Base.encode64(sig)
+    sig = :public_key.sign("signed data", :sha256, private_key)
+          |> Base.encode64()
 
     conn =
       conn(:post, "/clova", "")
@@ -110,8 +105,8 @@ defmodule Clova.ValidatorTest do
 
   test "when force_signature_valid is used, signature is validated even if it's invalid",
        %{public_key: public_key, private_key: private_key} do
-    {:ok, sig} = ExPublicKey.sign("signed data", private_key)
-    sig = Base.encode64(sig)
+    sig = :public_key.sign("signed data", :sha256, private_key)
+          |> Base.encode64()
 
     conn =
       conn(:post, "/clova", "")
@@ -159,8 +154,8 @@ defmodule Clova.ValidatorTest do
 
   test "when app_id is set and the request matches, validation passes",
        %{public_key: public_key, private_key: private_key} do
-    {:ok, sig} = ExPublicKey.sign("signed data", private_key)
-    sig = Base.encode64(sig)
+    sig = :public_key.sign("signed data", :sha256, private_key)
+          |>Base.encode64()
 
     conn =
       conn(:post, "/clova", "")
@@ -178,17 +173,22 @@ defmodule Clova.ValidatorTest do
     assert conn.assigns.clova_valid
   end
 
-  # This is a workaround because ExPublicKey.load() does not work with PEM private keys
-  # See https://github.com/ntrepid8/ex_crypto/issues/27
+  defp load_pub_key(filename) do
+    File.read!(filename)
+    |> :public_key.pem_decode()
+    |> hd
+    |> :public_key.pem_entry_decode()
+  end
+
   defp load_priv_key(filename) do
-    {:PrivateKeyInfo, :v1, _, private_key_binary, _} =
+    private_key_der =
       File.read!(filename)
       |> :public_key.pem_decode()
       |> hd
       |> :public_key.pem_entry_decode()
+      |> elem(3)
 
-    :public_key.der_decode(:RSAPrivateKey, private_key_binary)
-    |> ExPublicKey.RSAPrivateKey.from_sequence()
+    :public_key.der_decode(:RSAPrivateKey, private_key_der)
   end
 
   defp make_body_params(app_id \\ "com.example.app") do

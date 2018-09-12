@@ -47,7 +47,7 @@ defmodule Clova.Validator do
     opts
     |> Keyword.put_new(:app_id, nil)
     |> Keyword.put_new(:force_signature_valid, false)
-    |> Keyword.put_new_lazy(:public_key, fn -> ExPublicKey.loads!(@pubkey) end)
+    |> Keyword.put_new_lazy(:public_key, fn -> parse_public_key(@pubkey) end)
     |> Enum.into(%{})
   end
 
@@ -60,7 +60,7 @@ defmodule Clova.Validator do
       app_id = if expected_id, do: Clova.Request.application_id(request), else: nil
 
       cond do
-        !signature_valid?(body, signature, public_key, force) ->
+        !signature_valid?(body, signature, public_key, force: force) ->
           unauthorized(conn, "Signature invalid")
 
         !app_id_valid?(expected_id, app_id) ->
@@ -89,10 +89,16 @@ defmodule Clova.Validator do
 
   defp app_id_valid?(expected, actual), do: !expected || expected === actual
 
-  defp signature_valid?(_body, _signature, _public_key, true), do: true
+  defp parse_public_key(pem_str) do
+    pem_str
+    |> :public_key.pem_decode()
+    |> hd
+    |> :public_key.pem_entry_decode()
+  end
 
-  defp signature_valid?(body, signature, public_key, false) do
-    {:ok, valid} = ExPublicKey.verify(body, signature, public_key)
-    valid
+  defp signature_valid?(_body, _signature, _public_key, force: true), do: true
+
+  defp signature_valid?(body, signature, public_key, force: false) do
+    :public_key.verify(body, :sha256, signature, public_key)
   end
 end
