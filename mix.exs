@@ -1,7 +1,7 @@
 defmodule Clova.MixProject do
   use Mix.Project
 
-  @version "0.2.2"
+  @version "0.3.0"
 
   def project do
     [
@@ -45,7 +45,7 @@ defmodule Clova.MixProject do
       source_ref: "v#{@version}",
       groups_for_modules: [
         Plug: [
-          Clova.Parser,
+          Clova.CachingBodyReader,
           Clova.Validator,
           Clova.Dispatcher
         ],

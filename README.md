@@ -46,7 +46,7 @@ Add `:clova` to your `mix.exs` dependencies. This package assumes you will be us
 ```
   defp deps do
     [
-      {:clova, "~> 0.2.2"},
+      {:clova, "~> 0.3.0"},
       {:plug, "~> 1.5"},
       {:cowboy, "~> 2.2"}
     ]

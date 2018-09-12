@@ -20,7 +20,7 @@ defmodule Clova.CachingBodyReader do
 
   @doc """
   The specification of this module's `read_body/2` function for providing to `Plug.Parsers`'
-  `body_reader` option."
+  `body_reader` option.
   """
   def spec, do: {__MODULE__, :read_body, []}
 end
