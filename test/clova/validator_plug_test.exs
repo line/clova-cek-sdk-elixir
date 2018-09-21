@@ -1,7 +1,7 @@
-defmodule Clova.ValidatorTest do
+defmodule Clova.ValidatorPlugTest do
   use ExUnit.Case
   use Plug.Test
-  alias Clova.Validator
+  alias Clova.ValidatorPlug
 
   # To Generate keys:
   # openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -pkeyopt rsa_keygen_pubexp:65537 -out private.pem
@@ -20,7 +20,7 @@ defmodule Clova.ValidatorTest do
   end
 
   test "init uses the default public key" do
-    %{public_key: default_key, app_id: nil} = Validator.init([])
+    %{public_key: default_key, app_id: nil} = ValidatorPlug.init([])
     {:RSAPublicKey, data, _} = default_key
     assert to_string(data) |> String.starts_with?("2450758132787322")
   end
@@ -29,7 +29,7 @@ defmodule Clova.ValidatorTest do
     conn = make_conn()
     opts = %{public_key: "dummy", app_id: "dummy", force_signature_valid: false}
 
-    conn = Clova.Validator.call(conn, opts)
+    conn = Clova.ValidatorPlug.call(conn, opts)
     assert conn.resp_body === "Message unsigned"
     assert conn.status === 403
     refute conn.assigns.clova_valid
@@ -42,7 +42,7 @@ defmodule Clova.ValidatorTest do
 
     opts = %{public_key: "dummy", app_id: "dummy", force_signature_valid: false}
 
-    conn = Clova.Validator.call(conn, opts)
+    conn = Clova.ValidatorPlug.call(conn, opts)
     assert conn.resp_body === "Signature not Base64 encoded"
     assert conn.status === 403
     refute conn.assigns.clova_valid
@@ -57,7 +57,7 @@ defmodule Clova.ValidatorTest do
 
     opts = %{public_key: "dummy", app_id: "dummy", force_signature_valid: false}
 
-    conn = Clova.Validator.call(conn, opts)
+    conn = Clova.ValidatorPlug.call(conn, opts)
     assert conn.resp_body === ~S(Signature header in unexpected format: ["one", "two"])
     assert conn.status === 403
     refute conn.assigns.clova_valid
@@ -72,7 +72,7 @@ defmodule Clova.ValidatorTest do
       |> assign(:raw_body, "different_data")
 
     conn =
-      Clova.Validator.call(conn, %{
+      Clova.ValidatorPlug.call(conn, %{
         public_key: public_key,
         app_id: nil,
         force_signature_valid: false
@@ -85,8 +85,9 @@ defmodule Clova.ValidatorTest do
 
   test "when the signature does validate, sets :clova_valid to true",
        %{public_key: public_key, private_key: private_key} do
-    sig = :public_key.sign("signed data", :sha256, private_key)
-          |> Base.encode64()
+    sig =
+      :public_key.sign("signed data", :sha256, private_key)
+      |> Base.encode64()
 
     conn =
       conn(:post, "/clova", "")
@@ -94,7 +95,7 @@ defmodule Clova.ValidatorTest do
       |> assign(:raw_body, "signed data")
 
     conn =
-      Clova.Validator.call(conn, %{
+      Clova.ValidatorPlug.call(conn, %{
         public_key: public_key,
         app_id: nil,
         force_signature_valid: false
@@ -105,8 +106,9 @@ defmodule Clova.ValidatorTest do
 
   test "when force_signature_valid is used, signature is validated even if it's invalid",
        %{public_key: public_key, private_key: private_key} do
-    sig = :public_key.sign("signed data", :sha256, private_key)
-          |> Base.encode64()
+    sig =
+      :public_key.sign("signed data", :sha256, private_key)
+      |> Base.encode64()
 
     conn =
       conn(:post, "/clova", "")
@@ -115,7 +117,7 @@ defmodule Clova.ValidatorTest do
       |> Map.put(:body_params, make_body_params("test.matching.id"))
 
     conn =
-      Clova.Validator.call(conn, %{
+      Clova.ValidatorPlug.call(conn, %{
         public_key: public_key,
         app_id: "test.matching.id",
         force_signature_valid: true
@@ -124,7 +126,7 @@ defmodule Clova.ValidatorTest do
     assert conn.assigns.clova_valid
 
     conn =
-      Clova.Validator.call(conn, %{
+      Clova.ValidatorPlug.call(conn, %{
         public_key: public_key,
         app_id: "test.matching.id",
         force_signature_valid: false
@@ -141,7 +143,7 @@ defmodule Clova.ValidatorTest do
       |> Map.put(:body_params, make_body_params("test.actual.id"))
 
     conn =
-      Clova.Validator.call(conn, %{
+      Clova.ValidatorPlug.call(conn, %{
         public_key: "dummy public key",
         app_id: "test.expected.id",
         force_signature_valid: true
@@ -154,8 +156,9 @@ defmodule Clova.ValidatorTest do
 
   test "when app_id is set and the request matches, validation passes",
        %{public_key: public_key, private_key: private_key} do
-    sig = :public_key.sign("signed data", :sha256, private_key)
-          |>Base.encode64()
+    sig =
+      :public_key.sign("signed data", :sha256, private_key)
+      |> Base.encode64()
 
     conn =
       conn(:post, "/clova", "")
@@ -164,7 +167,7 @@ defmodule Clova.ValidatorTest do
       |> Map.put(:body_params, make_body_params("test.matching.id"))
 
     conn =
-      Clova.Validator.call(conn, %{
+      Clova.ValidatorPlug.call(conn, %{
         public_key: public_key,
         app_id: "test.matching.id",
         force_signature_valid: false

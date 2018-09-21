@@ -1,7 +1,7 @@
 defmodule Clova.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.4.0"
 
   def project do
     [
@@ -46,8 +46,9 @@ defmodule Clova.MixProject do
       groups_for_modules: [
         Plug: [
           Clova.CachingBodyReader,
-          Clova.Validator,
-          Clova.Dispatcher
+          Clova.ValidatorPlug,
+          Clova.DispatcherPlug,
+          Clova.EncoderPlug
         ],
         Request: [
           Clova.Request,
@@ -73,7 +74,6 @@ defmodule Clova.MixProject do
   def deps do
     [
       {:plug, "~> 1.5"},
-      {:poison, "~> 3.1"},
       {:ex_doc, "~> 0.16", only: :dev, runtime: false}
     ]
   end

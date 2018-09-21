@@ -1,4 +1,4 @@
-defmodule Clova.Validator do
+defmodule Clova.ValidatorPlug do
   import Plug.Conn
   @behaviour Plug
 
@@ -32,7 +32,7 @@ defmodule Clova.Validator do
     parsers: [:json],
     json_decoder: Poison,
     body_reader: Clova.CachingBodyReader.spec()
-  plug Clova.Validator, app_id: "com.example.my_extension"
+  plug Clova.ValidatorPlug, app_id: "com.example.my_extension"
   ```
 
   ## Options
@@ -57,7 +57,7 @@ defmodule Clova.Validator do
       ) do
     with [signature_header] <- get_req_header(conn, "signaturecek"),
          {:ok, signature} <- Base.decode64(signature_header) do
-      app_id = if expected_id, do: Clova.Request.application_id(request), else: nil
+      app_id = if expected_id, do: Clova.Request.get_application_id(request), else: nil
 
       cond do
         !signature_valid?(body, signature, public_key, force: force) ->

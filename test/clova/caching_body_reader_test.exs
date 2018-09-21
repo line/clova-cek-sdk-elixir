@@ -4,6 +4,10 @@ defmodule Clova.CachingBodyReaderTest do
 
   @known_json ~S({"foo":"bar"})
 
+  defmodule MockJsonDecoder do
+    def decode!(_), do: %{"foo" => "bar"}
+  end
+
   test "Requesting full body returns it and sets :raw_body" do
     {state, content, conn} = Clova.CachingBodyReader.read_body(make_conn(), [])
     assert state === :ok
@@ -38,7 +42,7 @@ defmodule Clova.CachingBodyReaderTest do
     opts =
       Plug.Parsers.init(
         parsers: [:json],
-        json_decoder: Poison,
+        json_decoder: MockJsonDecoder,
         body_reader: Clova.CachingBodyReader.spec()
       )
 

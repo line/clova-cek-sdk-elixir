@@ -2,16 +2,12 @@ defmodule Clova do
   @moduledoc """
   A behaviour for Clova extentions.
 
-  An implementation of this behaviour should be specified as the argument to the `Clova.Dispatcher` plug:
-
-  ```
-  plug Clova.Dispatcher, dispatch_to: MyExtension
-  ```
+  An implementation of this behaviour will be called by the `Clova.DispatcherPlug`.
 
   Each callback is called with a map representing the decoded clova request, and a struct representing the
   clova response. Helpers from the `Clova.Request` and `Clova.Response` modules for reading the request
   and manipulating the response are imported by default.  The callbacks should return the completed response
-  struct, which will be added to the `Plug.Conn` struct by `Clova.Dispatcher`.
+  struct, which will be added to the `Plug.Conn` struct by `Clova.DispatcherPlug`.
   """
 
   alias Clova.{Request, Response}

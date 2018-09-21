@@ -38,7 +38,7 @@ defmodule Clova.Response do
   @moduledoc """
   Defines a struct that contains the data that should be encoded into JSON as a response to a clova request.
 
-  An intance of this struct is initialised by the `Clova.Dispatcher` plug and passed to the
+  An intance of this struct is initialised by the `Clova.DispatcherPlug` and passed to the
   callbacks defined by the `Clova` behaviour.
   """
 
@@ -64,12 +64,7 @@ defmodule Clova.Response do
   `speech` can be Japanese text or a URL. When passing a URL, set the `type` argument to `:url`.
   """
   def add_reprompt(resp, speech, type \\ :text) do
-    reprompt =
-      case resp.response.reprompt do
-        existing = %Clova.Response.Reprompt{} -> existing
-        nil -> %Clova.Response.Reprompt{}
-      end
-
+    reprompt = resp.response.reprompt || %Clova.Response.Reprompt{}
     output_speech = add_speech_to_output_speech(reprompt.outputSpeech, speech, type)
     reprompt = put_in(reprompt.outputSpeech, output_speech)
     put_in(resp.response.reprompt, reprompt)
@@ -95,26 +90,23 @@ defmodule Clova.Response do
 
   defp add_speech_to_output_speech(output_speech, speech, :text) do
     speech_info = %Clova.Response.SpeechInfoObject{value: speech}
-    add_speech_to_output_speech(output_speech, speech_info)
+    add_speech_info_to_output_speech(output_speech, speech_info)
   end
 
   defp add_speech_to_output_speech(output_speech, speech, :url) do
     speech_info = %Clova.Response.SpeechInfoObject{type: "URL", value: speech, lang: ""}
-    add_speech_to_output_speech(output_speech, speech_info)
+    add_speech_info_to_output_speech(output_speech, speech_info)
   end
 
-  defp add_speech_to_output_speech(output_speech = %{type: "SpeechList"}, speech_info) do
+  defp add_speech_info_to_output_speech(output_speech = %{type: "SpeechList"}, speech_info) do
     update_in(output_speech.values, &(&1 ++ [speech_info]))
   end
 
-  defp add_speech_to_output_speech(output_speech = %{type: "SimpleSpeech"}, speech_info) do
+  defp add_speech_info_to_output_speech(output_speech = %{type: "SimpleSpeech"}, speech_info) do
     if output_speech.values.value == nil do
       put_in(output_speech.values, speech_info)
     else
-      %Clova.Response.OutputSpeech{
-        type: "SpeechList",
-        values: [output_speech.values, speech_info]
-      }
+      %{output_speech | type: "SpeechList", values: [output_speech.values, speech_info]}
     end
   end
 end

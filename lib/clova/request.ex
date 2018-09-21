@@ -14,14 +14,14 @@ defmodule Clova.Request do
   @doc """
   Helper function to retrieve the session attributes.
   """
-  def session_attributes(%{"session" => %{"sessionAttributes" => sessionAttributes}}) do
+  def get_session_attributes(%{"session" => %{"sessionAttributes" => sessionAttributes}}) do
     sessionAttributes
   end
 
   @doc """
   Helper function to retrieve the application ID.
   """
-  def application_id(%{
+  def get_application_id(%{
         "context" => %{"System" => %{"application" => %{"applicationId" => app_id}}}
       }) do
     app_id

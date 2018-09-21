@@ -20,12 +20,12 @@ defmodule Clova.RequestTest do
     assert slots == "bar"
   end
 
-  test "session_attributes gets the session attributes" do
-    assert make_request() |> Request.session_attributes() === %{"foo" => "bar"}
+  test "get_session_attributes gets the session attributes" do
+    assert make_request() |> Request.get_session_attributes() === %{"foo" => "bar"}
   end
 
-  test "application id gets the application do" do
-    assert make_request() |> Request.application_id() === "test_app_id"
+  test "get_application id gets the application do" do
+    assert make_request() |> Request.get_application_id() === "test_app_id"
   end
 
   defp make_request(slots \\ nil) do

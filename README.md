@@ -10,12 +10,11 @@ Defines a `Clova` behaviour which can be implemented to receive callbacks to han
 Example `Plug.Router` pipeline:
 
 ```
-plug Plug.Parsers,
-   parsers: [:json],
-   json_decoder: Poison,
-   body_reader: Clova.CachingBodyReader.spec()
-plug Clova.Validator, app_id: "com.example.my_extension"
-plug Clova.Dispatcher, dispatch_to: MyExtension
+plug Clova.SkillPlug,
+  dispatch_to: MyExtension,
+  app_id: "com.example.my_extension",
+  json_module: Poison
+
 plug :match
 plug :dispatch
 
@@ -46,9 +45,11 @@ Add `:clova` to your `mix.exs` dependencies. This package assumes you will be us
 ```
   defp deps do
     [
-      {:clova, "~> 0.3.0"},
+      {:clova, "~> 0.4.0"},
       {:plug, "~> 1.5"},
-      {:cowboy, "~> 2.2"}
+      {:cowboy, "~> 2.2"},
+      # You can use whichever JSON library you prefer
+      {:poison, "~> 3.1"}
     ]
   end
 ```

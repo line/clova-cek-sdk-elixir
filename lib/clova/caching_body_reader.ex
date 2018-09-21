@@ -1,8 +1,8 @@
 defmodule Clova.CachingBodyReader do
   @moduledoc """
-  This module is a wrapper of `Plug.Conn.read_body/2` that also stores the original raw request
+  This module provides a wrapper of `Plug.Conn.read_body/2` that also stores the original raw request
   body in the `:raw_body` assign. This is required to validate the request signature.
-  For request validation it is recommended to use the `Clova.Validator` plug.
+  The `Clova.ValidatorPlug` module provides request validation using this module.
   """
 
   @doc """
