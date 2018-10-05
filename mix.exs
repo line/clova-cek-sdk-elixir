@@ -1,7 +1,7 @@
 defmodule Clova.MixProject do
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.5.0"
 
   def project do
     [
@@ -73,7 +73,7 @@ defmodule Clova.MixProject do
 
   def deps do
     [
-      {:plug, "~> 1.5"},
+      {:plug, "~> 1.6"},
       {:ex_doc, "~> 0.16", only: :dev, runtime: false}
     ]
   end

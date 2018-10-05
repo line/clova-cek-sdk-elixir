@@ -45,15 +45,22 @@ defmodule Clova.Response do
   defstruct response: %Clova.Response.Response{}, sessionAttributes: %{}, version: "1.0"
 
   @doc """
-  Appends the specified `speech` to the response. `speech` can be Japanese text or a URL. When
-  passing a URL, set the `type` argument to `:url`.
+  Appends the specified `speech` to the response. `speech` can be text or a URL. When
+  passing a URL, set the `type:` option to `:url`.
 
   This function automatically upgrades a `SimpleSpeech`
   response to a `SpeechList` response if the response already contained a non-nil `SimpleSpeech`
-  string. If the response was empty, and only one utterance is provided, a `SimpleSpeech` response is created.
+  string. If the response was empty, a `SimpleSpeech` response is created.
+
+  ## Options
+
+  * `type:` - Can be `:text` or `:url`. Defaults to `:text`.
+  * `lang:` - Should be a two-letter language code. Defaults to `"ja"`. See the [`SpeechInfoObject`](https://clova-developers.line.me/guide/#/CEK/References/CEK_API.md#CustomExtSpeechInfoObject) documentation for the currently supported languages. When the `type:` option is set to `:url`, this option is ignored and the language is set to the empty string.
   """
-  def add_speech(resp, speech, type \\ :text) do
-    output_speech = add_speech_to_output_speech(resp.response.outputSpeech, speech, type)
+  def add_speech(resp, speech, opts \\ []) do
+    type = Keyword.get(opts, :type, :text)
+    lang = Keyword.get(opts, :lang, "ja")
+    output_speech = add_speech_to_output_speech(resp.response.outputSpeech, speech, lang, type)
     put_in(resp.response.outputSpeech, output_speech)
   end
 
@@ -61,11 +68,13 @@ defmodule Clova.Response do
   Adds the specified `speech` to the response's `reprompt` data. This is used by Clova to
   reprompt the user for an utterance when clova is expecting a reply but none is detected.
 
-  `speech` can be Japanese text or a URL. When passing a URL, set the `type` argument to `:url`.
+  The behavior is otherwise the same as `add_speech/3`.
   """
-  def add_reprompt(resp, speech, type \\ :text) do
+  def add_reprompt(resp, speech, opts \\ []) do
+    type = Keyword.get(opts, :type, :text)
+    lang = Keyword.get(opts, :lang, "ja")
     reprompt = resp.response.reprompt || %Clova.Response.Reprompt{}
-    output_speech = add_speech_to_output_speech(reprompt.outputSpeech, speech, type)
+    output_speech = add_speech_to_output_speech(reprompt.outputSpeech, speech, lang, type)
     reprompt = put_in(reprompt.outputSpeech, output_speech)
     put_in(resp.response.reprompt, reprompt)
   end
@@ -88,12 +97,12 @@ defmodule Clova.Response do
     put_in(response.response.shouldEndSession, true)
   end
 
-  defp add_speech_to_output_speech(output_speech, speech, :text) do
-    speech_info = %Clova.Response.SpeechInfoObject{value: speech}
+  defp add_speech_to_output_speech(output_speech, speech, lang, :text) do
+    speech_info = %Clova.Response.SpeechInfoObject{value: speech, lang: lang}
     add_speech_info_to_output_speech(output_speech, speech_info)
   end
 
-  defp add_speech_to_output_speech(output_speech, speech, :url) do
+  defp add_speech_to_output_speech(output_speech, speech, _lang, :url) do
     speech_info = %Clova.Response.SpeechInfoObject{type: "URL", value: speech, lang: ""}
     add_speech_info_to_output_speech(output_speech, speech_info)
   end

@@ -61,19 +61,26 @@ defmodule Clova.ResponseTest do
     assert bar_speech.value == "bar"
   end
 
-  test "add_speech with :url is reflected in the SpeechInfoObjecjt's type" do
-    empty_msg = %Clova.Response{}
-    url_msg = Clova.Response.add_speech(empty_msg, "url", :url)
-    assert url_msg.response.outputSpeech.values.value == "url"
-    assert url_msg.response.outputSpeech.values.type == "URL"
+  test "add_speech handles :type and :lang optional args" do
+    resp =
+      %Clova.Response{}
+      |> Clova.Response.add_speech("test1")
+      |> Clova.Response.add_speech("test2", type: :text)
+      |> Clova.Response.add_speech("test3", lang: "en")
+      |> Clova.Response.add_speech("test4", type: :text, lang: "en")
+      |> Clova.Response.add_speech("test5", lang: "en", type: :text)
+      |> Clova.Response.add_speech("test6", type: :url, lang: "en")
+      |> Clova.Response.add_speech("test7", lang: "ja", type: :url)
 
-    not_url_msg = Clova.Response.add_speech(empty_msg, "not url", :text)
-    assert not_url_msg.response.outputSpeech.values.value == "not url"
-    assert not_url_msg.response.outputSpeech.values.type == "PlainText"
+    [default, text, lang, text_lang, lang_text, url1, url2] = resp.response.outputSpeech.values
 
-    default_msg = Clova.Response.add_speech(empty_msg, "default")
-    assert default_msg.response.outputSpeech.values.value == "default"
-    assert default_msg.response.outputSpeech.values.type == "PlainText"
+    assert %{type: "PlainText", lang: "ja"} = default
+    assert %{type: "PlainText", lang: "ja"} = text
+    assert %{type: "PlainText", lang: "en"} = lang
+    assert %{type: "PlainText", lang: "en"} = text_lang
+    assert %{type: "PlainText", lang: "en"} = lang_text
+    assert %{type: "URL", lang: ""} = url1
+    assert %{type: "URL", lang: ""} = url2
   end
 
   test "end_session sets shouldEndSession to true" do
@@ -83,7 +90,7 @@ defmodule Clova.ResponseTest do
     assert ended.response.shouldEndSession
   end
 
-  test "add_reprompt adds a the repromt data" do
+  test "add_reprompt adds the reprompt data" do
     default = %Clova.Response{}
     assert default.response.reprompt == nil
     reprompted = Clova.Response.add_reprompt(default, "foo")
@@ -94,19 +101,24 @@ defmodule Clova.ResponseTest do
     assert bar_speech.value == "bar"
   end
 
-  test "add_reprompt with :url is reflected in the SpeechInfoObject type" do
+  test "add_reprompt handles :type and :lang optional args" do
     resp =
       %Clova.Response{}
-      |> Clova.Response.add_reprompt("foo", :url)
-      |> Clova.Response.add_reprompt("bar", :text)
-      |> Clova.Response.add_reprompt("baz")
+      |> Clova.Response.add_reprompt("default")
+      |> Clova.Response.add_reprompt("text", type: :text)
+      |> Clova.Response.add_reprompt("text_and_lang", type: :text, lang: "en")
+      |> Clova.Response.add_reprompt("lang_and_text", lang: "en", type: :text)
+      |> Clova.Response.add_reprompt("url", type: :url)
+      |> Clova.Response.add_reprompt("url_and_lang", type: :url, lang: "ja")
 
-    [foo_speech, bar_speech, baz_speech] = resp.response.reprompt.outputSpeech.values
-    assert foo_speech.value == "foo"
-    assert bar_speech.value == "bar"
-    assert baz_speech.value == "baz"
-    assert foo_speech.type == "URL"
-    assert bar_speech.type == "PlainText"
-    assert baz_speech.type == "PlainText"
+    [default, text, text_and_lang, lang_and_text, url, url_and_lang] =
+      resp.response.reprompt.outputSpeech.values
+
+    assert %{lang: "ja", type: "PlainText"} = default
+    assert %{lang: "ja", type: "PlainText"} = text
+    assert %{lang: "en", type: "PlainText"} = text_and_lang
+    assert %{lang: "en", type: "PlainText"} = lang_and_text
+    assert %{lang: "", type: "URL"} = url
+    assert %{lang: "", type: "URL"} = url_and_lang
   end
 end

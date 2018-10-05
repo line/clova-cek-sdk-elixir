@@ -77,7 +77,7 @@ defmodule Clova.ValidatorPlug do
   end
 
   def call(conn, _opts) do
-    unauthorized(conn, "Invalid request (validation falied)")
+    unauthorized(conn, "Invalid request (validation failed)")
   end
 
   defp unauthorized(conn, why) do

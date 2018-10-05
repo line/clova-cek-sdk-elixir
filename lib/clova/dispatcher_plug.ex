@@ -22,8 +22,8 @@ defmodule Clova.DispatcherPlug do
     json_decoder: Poison,
     body_reader: Clova.CachingBodyReader.spec()
 
-  plug Clova.Validator, app_id: "com.example.my_extension"
-  plug Clova.Dispatcher, dispatch_to: MyExtension
+  plug Clova.ValidatorPlug, app_id: "com.example.my_extension"
+  plug Clova.DispatcherPlug, dispatch_to: MyExtension
 
   plug :match
   plug :dispatch
