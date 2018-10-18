@@ -55,29 +55,43 @@ defmodule Clova.ValidatorPlug do
         conn = %{assigns: %{raw_body: body}, body_params: request},
         %{public_key: public_key, app_id: expected_id, force_signature_valid: force}
       ) do
-    with [signature_header] <- get_req_header(conn, "signaturecek"),
-         {:ok, signature} <- Base.decode64(signature_header) do
-      app_id = if expected_id, do: Clova.Request.get_application_id(request), else: nil
+    case get_decoded_signature(conn) do
+      {:ok, signature} ->
+        validate_sig_and_app_id(conn, body, request, public_key, expected_id, force, signature)
 
-      cond do
-        !signature_valid?(body, signature, public_key, force: force) ->
-          unauthorized(conn, "Signature invalid")
-
-        !app_id_valid?(expected_id, app_id) ->
-          unauthorized(conn, "Expected applicationId #{expected_id}, got #{app_id}")
-
-        true ->
-          assign(conn, :clova_valid, true)
-      end
-    else
-      [] -> unauthorized(conn, "Message unsigned")
-      :error -> unauthorized(conn, "Signature not Base64 encoded")
-      err -> unauthorized(conn, "Signature header in unexpected format: #{inspect err}")
+      {:error, message} ->
+        unauthorized(conn, message)
     end
   end
 
   def call(conn, _opts) do
     unauthorized(conn, "Invalid request (validation failed)")
+  end
+
+  defp get_decoded_signature(conn) do
+    with [signature_header] <- get_req_header(conn, "signaturecek"),
+         {:ok, signature} <- Base.decode64(signature_header) do
+      {:ok, signature}
+    else
+      [] -> {:error, "Message unsigned"}
+      :error -> {:error, "Signature not Base64 encoded"}
+      err -> {:error, "Signature header in unexpected format: #{inspect err}"}
+    end
+  end
+
+  defp validate_sig_and_app_id(conn, body, request, public_key, expected_id, force, signature) do
+    app_id = if expected_id, do: Clova.Request.get_application_id(request), else: nil
+
+    cond do
+      !signature_valid?(body, signature, public_key, force: force) ->
+        unauthorized(conn, "Signature invalid")
+
+      !app_id_valid?(expected_id, app_id) ->
+        unauthorized(conn, "Expected applicationId #{expected_id}, got #{app_id}")
+
+      true ->
+        assign(conn, :clova_valid, true)
+    end
   end
 
   defp unauthorized(conn, why) do
